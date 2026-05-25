@@ -12,6 +12,9 @@ import {
 
 function App() {
 
+ const API =
+   "https://ai-finops-dashboard.onrender.com";
+
   const [loggedIn, setLoggedIn] =
     useState(
       localStorage.getItem("loggedIn")
@@ -52,44 +55,58 @@ function App() {
 
   const signup = async () => {
 
-    const response =
-      await axios.post(
-        "http://localhost:8080/auth/signup",
-        {
-          username,
-          password
-        }
-      );
+    try {
 
-    alert(response.data);
+      const response =
+        await axios.post(
+          `${API}/auth/signup`,
+          {
+            username,
+            password
+          }
+        );
+
+      alert(response.data);
+
+    } catch {
+
+      alert("Signup failed");
+    }
   };
 
   const login = async () => {
 
-    const response =
-      await axios.post(
-        "http://localhost:8080/auth/login",
-        {
-          username,
-          password
-        }
-      );
+    try {
 
-    if (
-      response.data ===
-      "Login successful"
-    ) {
+      const response =
+        await axios.post(
+          `${API}/auth/login`,
+          {
+            username,
+            password
+          }
+        );
 
-      localStorage.setItem(
-        "loggedIn",
-        "true"
-      );
+      if (
+        response.data ===
+        "Login successful"
+      ) {
 
-      setLoggedIn(true);
+        localStorage.setItem(
+          "loggedIn",
+          "true"
+        );
 
-    } else {
+        setLoggedIn(true);
 
-      alert(response.data);
+      } else {
+
+        alert(response.data);
+      }
+
+    } catch {
+
+      alert("Login failed");
     }
   };
 
@@ -107,7 +124,7 @@ function App() {
 
       const response =
         await axios.get(
-          "http://localhost:8080/api/cloud-costs/aws-cost"
+          `${API}/api/cloud-costs/aws-cost`
         );
 
       setAwsCost(response.data);
@@ -118,7 +135,7 @@ function App() {
 
       const response =
         await axios.get(
-          "http://localhost:8080/api/cloud-costs/alert"
+          `${API}/api/cloud-costs/alert`
         );
 
       setAlertMessage(
@@ -131,7 +148,7 @@ function App() {
 
       const response =
         await axios.get(
-          "http://localhost:8080/api/cloud-costs/trend"
+          `${API}/api/cloud-costs/trend`
         );
 
       const months =
@@ -162,7 +179,7 @@ function App() {
 
       const response =
         await axios.get(
-          "http://localhost:8080/api/cloud-costs/chat",
+          `${API}/api/cloud-costs/chat`,
           {
             params: {
               question
@@ -193,7 +210,7 @@ function App() {
         </h1>
 
         <input
-          className="p-4 rounded-xl text-black mb-4 w-80"
+          className="p-4 rounded-xl bg-white text-black mb-4 w-80 border border-gray-300"
           placeholder="Username"
           value={username}
           onChange={(e) =>
@@ -204,7 +221,7 @@ function App() {
         />
 
         <input
-          className="p-4 rounded-xl text-black mb-4 w-80"
+          className="p-4 rounded-xl bg-white text-black mb-4 w-80 border border-gray-300"
           type="password"
           placeholder="Password"
           value={password}
@@ -278,7 +295,7 @@ function App() {
           <button
             onClick={() =>
               window.open(
-                "http://localhost:8080/api/cloud-costs/report"
+                `${API}/api/cloud-costs/report`
               )
             }
             className="bg-purple-500 px-5 py-3 rounded-xl"
