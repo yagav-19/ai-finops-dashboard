@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 
 import {
@@ -7,139 +7,318 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  CartesianGrid,
-  ResponsiveContainer
+  CartesianGrid
 } from "recharts";
 
 function App() {
 
-  const [costs, setCosts] = useState([]);
-  const [prediction, setPrediction] = useState(0);
-  const [recommendation, setRecommendation] = useState("");
+  const [loggedIn, setLoggedIn] =
+    useState(
+      localStorage.getItem("loggedIn")
+      === "true"
+    );
 
-  const chartData = [
-    { month: "Jan", cost: 18000 },
-    { month: "Feb", cost: 22000 },
-    { month: "Mar", cost: 25000 },
-    { month: "Apr", cost: 27000 },
-    { month: "May", cost: 32000 }
-  ];
+  const [username, setUsername] =
+    useState("");
+
+  const [password, setPassword] =
+    useState("");
+
+  const [awsCost, setAwsCost] =
+    useState("");
+
+  const [alertMessage, setAlertMessage] =
+    useState("");
+
+  const [trendData, setTrendData] =
+    useState([]);
+
+  const [question, setQuestion] =
+    useState("");
+
+  const [answer, setAnswer] =
+    useState("");
 
   useEffect(() => {
 
-    fetchCloudCosts();
-    fetchPrediction();
-    fetchRecommendation();
+    if (loggedIn) {
 
-  }, []);
+      fetchAwsCost();
+      fetchAlert();
+      fetchTrend();
+    }
 
-  const fetchCloudCosts = async () => {
+  }, [loggedIn]);
 
-    try {
+  const signup = async () => {
 
-      const response = await axios.get(
-        "http://localhost:8080/api/cloud-costs"
+    const response =
+      await axios.post(
+        "http://localhost:8080/auth/signup",
+        {
+          username,
+          password
+        }
       );
 
-      setCosts(response.data);
+    alert(response.data);
+  };
 
-    } catch (error) {
+  const login = async () => {
 
-      console.error("Error fetching cloud costs:", error);
+    const response =
+      await axios.post(
+        "http://localhost:8080/auth/login",
+        {
+          username,
+          password
+        }
+      );
+
+    if (
+      response.data ===
+      "Login successful"
+    ) {
+
+      localStorage.setItem(
+        "loggedIn",
+        "true"
+      );
+
+      setLoggedIn(true);
+
+    } else {
+
+      alert(response.data);
     }
   };
 
-  const fetchPrediction = async () => {
+  const logout = () => {
+
+    localStorage.removeItem(
+      "loggedIn"
+    );
+
+    setLoggedIn(false);
+  };
+
+  const fetchAwsCost =
+    async () => {
+
+      const response =
+        await axios.get(
+          "http://localhost:8080/api/cloud-costs/aws-cost"
+        );
+
+      setAwsCost(response.data);
+    };
+
+  const fetchAlert =
+    async () => {
+
+      const response =
+        await axios.get(
+          "http://localhost:8080/api/cloud-costs/alert"
+        );
+
+      setAlertMessage(
+        response.data
+      );
+    };
+
+  const fetchTrend =
+    async () => {
+
+      const response =
+        await axios.get(
+          "http://localhost:8080/api/cloud-costs/trend"
+        );
+
+      const months =
+        [
+          "Jan",
+          "Feb",
+          "Mar",
+          "Apr",
+          "May",
+          "Jun"
+        ];
+
+      const data =
+        response.data.map(
+          (cost, index) => ({
+            month:
+              months[index],
+            cost
+          })
+        );
+
+      setTrendData(data);
+    };
+
+  const askAi = async () => {
 
     try {
 
-      const response = await axios.get(
-        "http://localhost:8080/api/cloud-costs/predict?currentCost=25000&growth=15"
+      const response =
+        await axios.get(
+          "http://localhost:8080/api/cloud-costs/chat",
+          {
+            params: {
+              question
+            }
+          }
+        );
+
+      setAnswer(
+        response.data
       );
 
-      setPrediction(response.data);
+    } catch {
 
-    } catch (error) {
-
-      console.error("Error fetching prediction:", error);
+      setAnswer(
+        "AI chatbot error"
+      );
     }
   };
 
-  const fetchRecommendation = async () => {
+  if (!loggedIn) {
 
-    try {
+    return (
 
-      const response = await axios.get(
-        "http://localhost:8080/api/cloud-costs/ai-recommend?monthlyCost=50000&savings=12000"
-      );
+      <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center">
 
-      setRecommendation(response.data);
+        <h1 className="text-5xl font-bold mb-10">
+          GenAI FinOps Login 🔐
+        </h1>
 
-    } catch (error) {
+        <input
+          className="p-4 rounded-xl text-black mb-4 w-80"
+          placeholder="Username"
+          value={username}
+          onChange={(e) =>
+            setUsername(
+              e.target.value
+            )
+          }
+        />
 
-      console.error("Error fetching AI recommendation:", error);
-    }
-  };
+        <input
+          className="p-4 rounded-xl text-black mb-4 w-80"
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) =>
+            setPassword(
+              e.target.value
+            )
+          }
+        />
+
+        <div className="flex gap-4">
+
+          <button
+            onClick={signup}
+            className="bg-green-500 px-6 py-3 rounded-xl"
+          >
+            Signup
+          </button>
+
+          <button
+            onClick={login}
+            className="bg-cyan-500 px-6 py-3 rounded-xl"
+          >
+            Login
+          </button>
+
+        </div>
+
+      </div>
+    );
+  }
 
   return (
 
     <div className="min-h-screen bg-slate-950 text-white p-10">
 
-      <h1 className="text-6xl font-bold text-center mb-12">
-        AI FinOps Cloud Dashboard 🚀
-      </h1>
+      <div className="flex justify-between items-center mb-10">
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <h1 className="text-5xl font-bold">
+          GenAI FinOps Dashboard 🚀
+        </h1>
 
-        <div className="bg-slate-800 p-8 rounded-3xl shadow-2xl hover:scale-105 transition duration-300">
+        <button
+          onClick={logout}
+          className="bg-red-500 px-5 py-2 rounded-xl"
+        >
+          Logout
+        </button>
 
-          <h2 className="text-3xl font-bold">
-            Total Records
-          </h2>
+      </div>
 
-          <p className="text-6xl mt-4 text-cyan-400">
-            {costs.length}
-          </p>
+      <div className="bg-slate-800 p-8 rounded-3xl mb-10">
 
-        </div>
+        <h2 className="text-3xl font-bold">
+          AWS Monthly Cost ☁️
+        </h2>
 
-        <div className="bg-slate-800 p-8 rounded-3xl shadow-2xl hover:scale-105 transition duration-300">
+        <p className="text-5xl mt-4 text-yellow-400">
+          $ {Number(awsCost).toFixed(2)}
+        </p>
 
-          <h2 className="text-3xl font-bold">
-            Predicted Cost
-          </h2>
+        <div className="mt-5 flex gap-4">
 
-          <p className="text-5xl mt-4 text-green-400">
-            ₹ {prediction}
-          </p>
+          <button
+            onClick={fetchAwsCost}
+            className="bg-blue-500 px-5 py-3 rounded-xl"
+          >
+            Refresh Cost
+          </button>
+
+          <button
+            onClick={() =>
+              window.open(
+                "http://localhost:8080/api/cloud-costs/report"
+              )
+            }
+            className="bg-purple-500 px-5 py-3 rounded-xl"
+          >
+            Download PDF Report
+          </button>
 
         </div>
 
       </div>
 
-      <div className="bg-slate-800 p-8 rounded-3xl shadow-2xl mt-10">
+      <div className="bg-slate-800 p-8 rounded-3xl mb-10">
 
-        <h2 className="text-4xl font-bold mb-6">
-          AI Recommendation 🤖
+        <h2 className="text-3xl font-bold mb-4">
+          Cost Alert 🚨
         </h2>
 
-        <p className="text-xl leading-relaxed text-slate-300 whitespace-pre-line">
-          {recommendation}
+        <p className="text-2xl text-orange-400">
+
+          {alertMessage}
+
         </p>
 
       </div>
 
-      <div className="bg-slate-800 p-8 rounded-3xl shadow-2xl mt-10">
+      <div className="bg-slate-800 p-8 rounded-3xl mb-10">
 
-        <h2 className="text-4xl font-bold mb-8">
-          Cloud Cost Trends 📈
+        <h2 className="text-3xl font-bold mb-6">
+          AWS Cost Trend 📈
         </h2>
 
-        <ResponsiveContainer width="100%" height={350}>
+        <div className="w-full overflow-x-auto">
 
-          <LineChart data={chartData}>
+          <LineChart
+            width={900}
+            height={320}
+            data={trendData}
+          >
 
-            <CartesianGrid stroke="#444" />
+            <CartesianGrid strokeDasharray="3 3" />
 
             <XAxis dataKey="month" />
 
@@ -150,49 +329,45 @@ function App() {
             <Line
               type="monotone"
               dataKey="cost"
-              stroke="#06b6d4"
-              strokeWidth={4}
+              stroke="#38bdf8"
+              strokeWidth={3}
             />
 
           </LineChart>
 
-        </ResponsiveContainer>
+        </div>
 
       </div>
 
-      <div className="bg-slate-800 p-8 rounded-3xl shadow-2xl mt-10">
+      <div className="bg-slate-800 p-8 rounded-3xl">
 
-        <h2 className="text-4xl font-bold mb-8">
-          Saved Cloud Costs 💾
+        <h2 className="text-3xl font-bold mb-6">
+          Ask AI About Cloud Costs 🤖
         </h2>
 
-        {
-          costs.map((cost) => (
+        <input
+          value={question}
+          onChange={(e) =>
+            setQuestion(
+              e.target.value
+            )
+          }
+          placeholder="How can I reduce AWS cost?"
+          className="w-full p-4 rounded-xl text-black"
+        />
 
-            <div
-              key={cost.id}
-              className="border-b border-slate-600 py-6"
-            >
+        <button
+          onClick={askAi}
+          className="mt-4 bg-cyan-500 px-6 py-3 rounded-xl font-bold"
+        >
+          Ask AI
+        </button>
 
-              <p className="text-xl">
-                <strong>Monthly Cost:</strong>
-                ₹ {cost.monthlyCost}
-              </p>
+        <div className="mt-8 whitespace-pre-line text-slate-300">
 
-              <p className="text-xl mt-2">
-                <strong>Predicted Cost:</strong>
-                ₹ {cost.predictedCost}
-              </p>
+          {answer}
 
-              <p className="text-xl mt-2">
-                <strong>Savings Opportunity:</strong>
-                ₹ {cost.savingsOpportunity}
-              </p>
-
-            </div>
-
-          ))
-        }
+        </div>
 
       </div>
 

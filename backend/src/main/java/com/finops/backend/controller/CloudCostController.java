@@ -1,72 +1,146 @@
 package com.finops.backend.controller;
 
 import com.finops.backend.ai.GeminiService;
-import com.finops.backend.model.CloudCost;
+import com.finops.backend.aws.AwsCostService;
+import com.finops.backend.email.EmailService;
+import com.finops.backend.pdf.PdfReportService;
 import com.finops.backend.repository.CloudCostRepository;
 import com.finops.backend.service.PredictionService;
 import com.finops.backend.service.RecommendationService;
+
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
-@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/cloud-costs")
+@CrossOrigin(origins = "*")
 public class CloudCostController {
 
     private final CloudCostRepository cloudCostRepository;
+
     private final PredictionService predictionService;
+
     private final RecommendationService recommendationService;
+
     private final GeminiService geminiService;
+
+    private final AwsCostService awsCostService;
+
+    private final PdfReportService pdfReportService;
+
+    private final EmailService emailService;
 
     public CloudCostController(
             CloudCostRepository cloudCostRepository,
             PredictionService predictionService,
             RecommendationService recommendationService,
-            GeminiService geminiService) {
+            GeminiService geminiService,
+            AwsCostService awsCostService,
+            PdfReportService pdfReportService,
+            EmailService emailService) {
 
-        this.cloudCostRepository = cloudCostRepository;
-        this.predictionService = predictionService;
-        this.recommendationService = recommendationService;
-        this.geminiService = geminiService;
+        this.cloudCostRepository =
+                cloudCostRepository;
+
+        this.predictionService =
+                predictionService;
+
+        this.recommendationService =
+                recommendationService;
+
+        this.geminiService =
+                geminiService;
+
+        this.awsCostService =
+                awsCostService;
+
+        this.pdfReportService =
+                pdfReportService;
+
+        this.emailService =
+                emailService;
     }
 
-    @PostMapping
-    public CloudCost saveCloudCost(@RequestBody CloudCost cloudCost) {
+    @GetMapping("/aws-cost")
+    public String getAwsCost() {
 
-        return cloudCostRepository.save(cloudCost);
+        return awsCostService
+                .getMonthlyAwsCost();
     }
 
-    @GetMapping
-    public List<CloudCost> getAllCloudCosts() {
+    @GetMapping("/chat")
+    public String askAi(
+            @RequestParam String question) {
 
-        return cloudCostRepository.findAll();
+        try {
+
+            return geminiService
+                    .generateRecommendation(
+                            50000,
+                            12000
+                    )
+                    + "\n\nQuestion: "
+                    + question;
+
+        } catch (Exception e) {
+
+            return "Gemini error: "
+                    + e.getMessage();
+        }
     }
 
-    @GetMapping("/predict")
-    public double predictCost(@RequestParam double currentCost,
-                              @RequestParam double growth) {
+    @GetMapping("/report")
+    public String generatePdfReport() {
 
-        return predictionService
-                .predictNextMonthCost(currentCost, growth);
+        String awsCost =
+                awsCostService
+                        .getMonthlyAwsCost();
+
+        String recommendation =
+                geminiService
+                        .generateRecommendation(
+                                50000,
+                                12000
+                        );
+
+        return pdfReportService
+                .generateReport(
+                        awsCost,
+                        recommendation
+                );
     }
 
-    @GetMapping("/recommend")
-    public String getRecommendation(@RequestParam double monthlyCost,
-                                    @RequestParam double savings) {
+    @GetMapping("/trend")
+    public double[] getTrend() {
 
-        return recommendationService
-                .generateRecommendation(monthlyCost, savings);
+        return new double[]{
+                4100,
+                5300,
+                4700,
+                6200,
+                5800,
+                6900
+        };
     }
 
-    @GetMapping("/ai-recommend")
-    public String getAiRecommendation(
-            @RequestParam double monthlyCost,
-            @RequestParam double savings) {
+    @GetMapping("/alert")
+    public String getAlert() {
 
-        return geminiService.generateRecommendation(
-                monthlyCost,
-                savings
-        );
+        double cost =
+                Double.parseDouble(
+                        awsCostService
+                                .getMonthlyAwsCost()
+                );
+
+        if (cost >200) {
+
+            emailService.sendAlert(
+                    "yagavsakthivel@gmail.com",
+                    "High AWS spending detected this month."
+            );
+
+            return "⚠️ High AWS spending detected";
+        }
+
+        return "✅ AWS spending normal";
     }
 }
